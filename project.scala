@@ -6,3 +6,4 @@
 //> using test.dep org.scalameta::munit::1.1.0
 //> using scala 3.6.4
 //> using option -Wunused:all
+//> using options -no-indent -rewrite

@@ -6,7 +6,7 @@ import scala.meta.*
 import scala.util.Try
 import scala.meta.parsers.Parsed
 
-@main def hello =
+@main def hello = {
   val openNodes = WebStorageVar
     .localStorage(key = "scalameta-openNodes", syncOwner = None)
     .withCodec[Set[Int]](
@@ -56,7 +56,7 @@ import scala.meta.parsers.Parsed
   val resultNode =
     treeViewVar.signal
       .combineWith(errorVar)
-      .map:
+      .map {
         case (None, Some(err)) =>
           p(
             cls := "text-wrap text-sm bg-red-200 text-red-800 p-4 font-bold rounded-md",
@@ -64,6 +64,7 @@ import scala.meta.parsers.Parsed
           )
         case (Some(tv), None) => tv.node
         case _                => emptyNode
+    }
 
   val halfsplit =
     Seq(cls := "lg:w-6/12 h-full md:w-full")
@@ -99,7 +100,7 @@ import scala.meta.parsers.Parsed
     )
 
   renderOnDomContentLoaded(dom.document.getElementById("app"), app)
-end hello
+}
 
 val basicLink =
   cls := "text-emerald-800 hover:no-underline underline"

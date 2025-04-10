@@ -1,4 +1,4 @@
-class IntervalTreeSpec extends munit.FunSuite:
+class IntervalTreeSpec extends munit.FunSuite {
   test("basics") {
 
     val spans = Map(
@@ -49,4 +49,4 @@ class IntervalTreeSpec extends munit.FunSuite:
     val tree = IntervalTree.construct(spans.toMap)
 
   }
-end IntervalTreeSpec
+}

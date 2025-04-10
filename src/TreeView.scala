@@ -10,7 +10,7 @@ case class TreeView(
     openNodes: Var[Set[Int]],
     cursor: Var[CodeMirrorCursor],
     hover: Var[Option[Int]]
-):
+) {
 
   def getTree(id: Int): Option[Tree] =
     direct.get(id)
@@ -59,27 +59,30 @@ case class TreeView(
     * tree.
     */
   private lazy val deepestTreeUnderCursor: Signal[List[Int]] =
-    cursor.signal.map: cursor =>
+    cursor.signal.map{ cursor =>
       textIndex
         .posLookup(cursor.line, cursor.ch)
-        .map: offset =>
+        .map{ offset =>
           val deepest = intervalTree
             .resolve(offset)
-            .sortBy: treeId =>
+            .sortBy{ treeId =>
               offset - direct(treeId).pos.start
-
-          deepest.headOption match
+            }
+          deepest.headOption match {
             case None => Nil
             case Some(value) =>
               @tailrec
               def go(id: Int, cur: List[Int]): List[Int] =
-                direct.get(id).flatMap(_.parent).flatMap(reverse.get) match
+                direct.get(id).flatMap(_.parent).flatMap(reverse.get) match {
                   case None         => cur
                   case Some(parent) => go(parent, parent :: cur)
+                }
 
               go(value, List(value)).reverse
-          end match
+          }
+        }
         .getOrElse(Nil)
+    }
 
   private lazy val (
     /** Map from tree id to tree */
@@ -88,14 +91,15 @@ case class TreeView(
     reverse
   ) = index(tree)
 
-  private lazy val intervalTree = IntervalTree.construct(reverse.map:
-    (tree, id) => OffsetRange(tree.pos.start, tree.pos.end) -> id)
+  private lazy val intervalTree = IntervalTree.construct(reverse.map {
+    (tree, id) => OffsetRange(tree.pos.start, tree.pos.end) -> id
+  })
 
   /** Recursively create DOM tree structure that represents the Scalameta tree.
     *
     * TODO: Make this tail recursive.
     */
-  private def encode(t: Tree): Element =
+  private def encode(t: Tree): Element = {
     val id = reverse(t)
     span(
       span(
@@ -107,11 +111,11 @@ case class TreeView(
         a(
           cls := "text-blue-700 text-sm",
           href := "#",
-          child.text <-- isToggled(id).map: b =>
+          child.text <-- isToggled(id).map{ b =>
             val moniker =
               if t.children.isEmpty then "  " else if b then "- " else "+ "
             moniker + t.productPrefix
-          ,
+          },
           onClick.preventDefault.mapToStrict(id) --> toggle,
           onMouseOver.mapToStrict(id) --> hover.someWriter,
           onMouseOut.mapToStrict(None) --> hover
@@ -130,10 +134,10 @@ case class TreeView(
           .map(if _ then "block" else "none")
       )
     )
-  end encode
+  }
 
   /** Index every tree with a numeric identifier */
-  private def index(t: Tree): (Map[Int, Tree], Map[Tree, Int]) =
+  private def index(t: Tree): (Map[Int, Tree], Map[Tree, Int]) = {
     def go(
         next: Seq[Tree],
         n: Int,
@@ -141,7 +145,7 @@ case class TreeView(
         reverse: Map[Tree, Int]
     ): (Map[Int, Tree], Map[Tree, Int]) =
       if next.isEmpty then (direct, reverse)
-      else
+      else {
         val ids = next.zipWithIndex.map { case (tree, idx) =>
           (n + idx) -> tree
         }.toMap
@@ -152,7 +156,8 @@ case class TreeView(
           direct ++ ids,
           reverse ++ reverseIds
         )
+      }
     end go
     go(Seq(t), 0, Map.empty, Map.empty)
-  end index
-end TreeView
+  }
+}

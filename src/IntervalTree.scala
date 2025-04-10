@@ -1,29 +1,33 @@
 import scala.annotation.tailrec
 
-case class OffsetRange(from: Int, to: Int):
+case class OffsetRange(from: Int, to: Int) {
   override def toString: String = s"[$from-$to]"
+}
 
-trait IntervalTree[T]:
+trait IntervalTree[T] {
   def resolve(offset: Int): List[T]
+}
 
-private enum Tree:
+private enum Tree {
   case Split(point: Int, left: Tree, right: Tree, in: List[OffsetRange])
   case Leaf(span: OffsetRange)
   case Empty
+}
 
-object IntervalTree:
-  def construct[T](mp: Map[OffsetRange, T]): IntervalTree[T] =
+object IntervalTree {
+  def construct[T](mp: Map[OffsetRange, T]): IntervalTree[T] = {
 
-    enum WorkType:
+    enum WorkType {
       case Process(work: List[OffsetRange])
       case Fuse(centerPoint: Int, overlapping: List[OffsetRange])
+    }
 
     @tailrec
     def splitTR(
         workStack: List[WorkType],
         stack: List[Tree]
     ): Option[Tree] =
-      workStack match
+      workStack match {
         case Nil => stack.headOption
         case WorkType.Fuse(centerPoint, overlapping) :: rest =>
           splitTR(
@@ -39,7 +43,7 @@ object IntervalTree:
           if sortedSpans.size == 1 then
             splitTR(rest, Tree.Leaf(sortedSpans.head) +: stack)
           else if sortedSpans.size == 0 then splitTR(rest, Tree.Empty +: stack)
-          else
+          else {
             val start = sortedSpans.head.from
             val end = sortedSpans.last.to
             val centerPoint = (start + end) / 2
@@ -60,7 +64,8 @@ object IntervalTree:
                 rest,
               stack
             )
-      end match
+          }
+      }
     end splitTR
 
     val sorted =
@@ -70,15 +75,15 @@ object IntervalTree:
       splitTR(List(WorkType.Process(sorted)), Nil).getOrElse(Tree.Empty)
 
     Impl(data, mp)
-  end construct
+  }
 
   private class Impl[T](tree: Tree, mp: Map[OffsetRange, T])
-      extends IntervalTree[T]:
-    override def resolve(offset: Int): List[T] =
+      extends IntervalTree[T] {
+    override def resolve(offset: Int): List[T] = {
       import Tree.*
       @tailrec
       def go(t: Tree, result: List[OffsetRange]): List[OffsetRange] =
-        t match
+        t match {
           case Split(point, left, right, in) =>
             if offset == point then in ++ result
             else if offset > point then
@@ -91,9 +96,10 @@ object IntervalTree:
             then result
             else span :: result
           case Empty => result
+        }
 
       go(tree, Nil).flatMap(mp.get)
-    end resolve
-  end Impl
+    }
+  }
 
-end IntervalTree
+}
