@@ -1,6 +1,7 @@
 import com.raquo.laminar.api.L.*
 
 import scalajs.js
+import scala.meta.contrib.instances.instances
 
 /** This component attaches CodeMirror to a Laminar-managed <textarea> element,
   * and uses various CodeMirror event APIs to integrate with the rest of the
@@ -19,10 +20,12 @@ import scalajs.js
   */
 class CodeMirrorTextArea(
     target: Var[String],
+    tree: Var[Option[scala.meta.Tree]],
     cursor: Var[CodeMirrorCursor],
     hover: Var[Option[Int]],
-    tv: Signal[Option[TreeView]]
+    tv: Signal[Option[CodeExplainer]]
 ) {
+
   private var instance = Option.empty[CodeMirrorInstance]
   private var marker = Option.empty[CodeMirrorMark]
   private val highlightText = hover.signal.combineWith(tv) --> {
@@ -33,8 +36,7 @@ class CodeMirrorTextArea(
         hover <- hoverOpt
         inst <- instance
         tree <- treeview.getTree(hover)
-      }
-      do
+      }{
         marker = Some(
           inst.markText(
             js.Dynamic
@@ -46,7 +48,7 @@ class CodeMirrorTextArea(
             )
           )
         )
-      end for
+      }
   }
 
   val node = textArea(
@@ -70,6 +72,7 @@ class CodeMirrorTextArea(
       instance
         .foreach(_.on("change", value => target.set(value.getValue())))
 
+      instance.foreach(_ => eventProp("cursorActivity").map(_ =>123) --> hover.someWriter)
       instance.foreach(_.setSize("100%", "100%"))
       instance.foreach(
         _.on(

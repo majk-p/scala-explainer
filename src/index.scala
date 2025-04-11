@@ -23,38 +23,44 @@ import scala.meta.parsers.Parsed
     .text(SampleCode)
   val cursorVar = Var(CodeMirrorCursor(0, 0))
   val hoverVar = Var(Option.empty[Int])
-  val treeViewVar = Var(Option.empty[TreeView])
+  val treeVar = Var(Option.empty[Tree])
+  val codeExplainerVar = Var(Option.empty[CodeExplainer])
   val errorVar = Var(Option.empty[Parsed.Error])
   val dialectPicker = DialectPicker()
 
-  def parse(s: String, dialect: Dialect): Either[Parsed.Error, TreeView] =
+  def parse(s: String, dialect: Dialect): Either[Parsed.Error, (String, Tree)] =
     dialect
       .apply(s)
       .parse[scala.meta.Source]
       .toEither
-      .map(tree =>
-        TreeView(
+      .map(tree => (s, tree))
+
+  val parsed =
+    codeVar.signal.combineWith(dialectPicker.dialectVar.signal).map(parse)
+
+  val updateTree = parsed.map(_.toOption.map(_._2)) --> treeVar.writer
+
+  val codeExplainer =
+    parsed.map(eitherTree =>
+      eitherTree.map { (s, tree) =>
+        CodeExplainer(
           tree,
           TextIndex.construct(s),
           openNodes,
           cursorVar,
           hoverVar
         )
-      )
-  end parse
+      }
+    )
 
-  val parsed =
-    codeVar.signal.combineWith(dialectPicker.dialectVar.signal).map(parse)
-
-  // TODO: stop using options and just do Either
-  val updateTreeView =
-    parsed.map(_.toOption) --> treeViewVar.writer
+  val updateCodeExplainer =
+    codeExplainer.map(_.toOption) --> codeExplainerVar.writer
 
   val updateError =
-    parsed.map(_.left.toOption) --> errorVar.writer
+    codeExplainer.map(_.left.toOption) --> errorVar.writer
 
   val resultNode =
-    treeViewVar.signal
+    codeExplainerVar.signal
       .combineWith(errorVar)
       .map {
         case (None, Some(err)) =>
@@ -64,7 +70,7 @@ import scala.meta.parsers.Parsed
           )
         case (Some(tv), None) => tv.node
         case _                => emptyNode
-    }
+      }
 
   val halfsplit =
     Seq(cls := "lg:w-6/12 h-full md:w-full")
@@ -72,20 +78,22 @@ import scala.meta.parsers.Parsed
   val textEditor =
     CodeMirrorTextArea(
       codeVar,
+      treeVar,
       cursorVar,
       hoverVar,
-      treeViewVar.signal
+      codeExplainerVar.signal
     )
 
   val app =
     div(
-      updateTreeView,
+      updateTree,
+      updateCodeExplainer,
       updateError,
       cls := "content mx-auto my-4 w-10/12 bg-white/70 p-6 rounded-xl flex flex-col gap-4 min-h-150",
       div(
         cls := "flex items-center gap-4",
         img(src := "https://scalameta.org/img/scalameta.png", cls := "h-12"),
-        h1("Scala AST explorer", cls := "text-4xl font-bold")
+        h1("Scala Explainer", cls := "text-4xl font-bold")
       ),
       header,
       dialectPicker.node,
@@ -95,7 +103,7 @@ import scala.meta.parsers.Parsed
           halfsplit,
           textEditor.node
         ),
-        div(halfsplit, p(code(pre(child <-- resultNode))))
+        div(halfsplit, p((child <-- resultNode)))
       )
     )
 
@@ -109,13 +117,13 @@ val header = div(
   cls := "flex flex-row gap-4 place-content-between w-full",
   p(
     cls := "text-md",
-    "Explore the AST of Scala code"
+    "Understand your scala code"
   ),
   p(
     cls := "text-sm",
     a(
       "Github",
-      href := "https://github.com/scalameta/ast-explorer",
+      href := "https://github.com/majk-p/scala-explainer",
       basicLink
     ),
     " | ",
@@ -140,8 +148,11 @@ val header = div(
 )
 
 val SampleCode =
-  """
-object X:
+  """object X:
   class Test(a: Int):
     def hello = 25
+
+given Functor[List] with {
+  def map() = ??? 
+}
 """

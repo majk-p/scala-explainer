@@ -4,7 +4,7 @@ import scala.annotation.tailrec
 import scala.meta.*
 import com.raquo.airstream.core.Signal
 
-case class TreeView(
+case class CodeExplainer(
     tree: Tree,
     textIndex: TextIndex,
     openNodes: Var[Set[Int]],
@@ -18,37 +18,22 @@ case class TreeView(
   lazy val node = div(
     cls := "bg-gray-100 p-2 rounded-lg shadow-md w-full",
     deepestTreeUnderCursor --> pathToCursor,
+    deepestTreeUnderCursor.map(_.head) --> hover.someWriter,
     pathToCursor.signal.map(_.toSet) --> append,
     div(
-      cls := "flex flex-row gap-2 mb-2",
-      a(
-        href := "#",
-        cls := "bg-gray-200 hover:bg-gray-300 rounded-md px-2 py-1 text-xs",
-        "collapse all",
-        onClick.mapToStrict(Set.empty) --> openNodes,
-        onClick.mapToStrict(List.empty) --> pathToCursor
-      ),
-      a(
-        href := "#",
-        cls := "bg-gray-200 hover:bg-gray-300 rounded-md px-2 py-1 text-xs",
-        "expand all",
-        onClick.mapTo(direct.keySet) --> openNodes
-      )
+      cls := "flex flex-row gap-2 mb-2 bg-gray-300 rounded-md px-2 py-1 text-m",
+      "Code explanation"
     ),
-    code(encode(tree))
+    div(
+      cls := "flex flex-row text-m",
+      encode(tree)
+    )
+    // code(encode(tree))
   )
-
-  /** Expand/collapse a single tree by its id */
-  private val toggle = openNodes.updater[Int]: (cur, next) =>
-    if cur(next) then cur - next else cur + next
 
   /** Helper to expand all trees with a given Set[Int] of tree ids */
   private val append = openNodes.updater[Set[Int]]: (cur, next) =>
     cur ++ next
-
-  /** True if tree is expanded in the tree view */
-  private def isToggled(id: Int) = openNodes.signal.map(_.contains(id))
-
   /** Represents the path from the root to the deepest tree that spans the
     * current cursor position
     */
@@ -100,39 +85,12 @@ case class TreeView(
     * TODO: Make this tail recursive.
     */
   private def encode(t: Tree): Element = {
-    val id = reverse(t)
-    span(
-      span(
-        cls <-- pathToCursor.signal.map(p =>
-          if p.headOption.contains(id) then "bg-amber-500"
-          else if p.contains(id) then "bg-amber-100"
-          else ""
-        ),
-        a(
-          cls := "text-blue-700 text-sm",
-          href := "#",
-          child.text <-- isToggled(id).map{ b =>
-            val moniker =
-              if t.children.isEmpty then "  " else if b then "- " else "+ "
-            moniker + t.productPrefix
-          },
-          onClick.preventDefault.mapToStrict(id) --> toggle,
-          onMouseOver.mapToStrict(id) --> hover.someWriter,
-          onMouseOut.mapToStrict(None) --> hover
-        ),
-        " ",
-        i(
-          cls := "text-amber-700 text-xs font-mono",
-          s"[${t.pos.start};${t.pos.end}]"
-        )
-      ),
-      ul(
-        cls := "list-inside list-none ml-4",
-        t.children.map(child => li(encode(child))),
-        display <-- openNodes.signal
-          .map(_.contains(id))
-          .map(if _ then "block" else "none")
-      )
+    // val id = reverse(t)
+    div(
+      text <-- deepestTreeUnderCursor.map { ids => 
+        val trees = ids.map(direct)
+        Explanation.forTreePath(trees)
+      }
     )
   }
 
