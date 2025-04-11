@@ -39,7 +39,11 @@ class DialectPicker() {
 
   /** Dialect picker component */
   val node = div(
-    cls := "flex flex-row gap-2 text-xs mb-2",
+    cls := "flex flex-row gap-2 mb-2",
+    p(
+      cls := "text-md",
+      "Scala dialect:"
+    ),
     children <-- dialectVar.signal.map{ current =>
       allowedDialects.map{ (name, dialect) =>
         button(

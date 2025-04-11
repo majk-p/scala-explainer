@@ -104,7 +104,8 @@ import scala.meta.parsers.Parsed
           textEditor.node
         ),
         div(halfsplit, p((child <-- resultNode)))
-      )
+      ),
+      footer
     )
 
   renderOnDomContentLoaded(dom.document.getElementById("app"), app)
@@ -127,6 +128,7 @@ val header = div(
       basicLink
     ),
     " | ",
+    " Standing on the shoulders of giants: ",
     a(
       "Scalameta",
       href := "https://scalameta.org",
@@ -145,6 +147,11 @@ val header = div(
       basicLink
     )
   )
+)
+
+val footer = p(
+  cls := "text-md",
+  "This project is very much work in progress, contributions welcome!"
 )
 
 val SampleCode =
