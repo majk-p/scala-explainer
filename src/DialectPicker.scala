@@ -39,7 +39,7 @@ class DialectPicker() {
 
   /** Dialect picker component */
   val node = div(
-    cls := "flex flex-row gap-2 mb-2",
+    cls := "flex flex-row gap-2 mb-2 flex-wrap",
     p(
       cls := "text-md",
       "Scala dialect:"
